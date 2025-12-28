@@ -25,13 +25,14 @@ export default function Body() {
 //     }, [img1]);
 
   return (
-    <div className="w-screen h-screen flex items-center justify-center ">
+    <div className="w-full h-full flex items-center justify-center bg-black ">
 
         {/* Upload section */}
         {currentStep === 1 &&(
-            <div className="flex flex-row gap-x-16 justify-center items-center">
+            <div className="flex  gap-24 justify-center ms-32">
                 <ImageUploader title={"Person 1"} setImg={setImg1} preview={preview1}/>
                 <ImageUploader title={"Person 2"} setImg={setImg2} preview={preview2}/>
+
             </div>)
         }
     </div>
