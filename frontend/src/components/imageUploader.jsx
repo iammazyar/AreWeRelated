@@ -10,27 +10,32 @@ export default function ImageUploader({title, setImg, preview}) {
                     <img
                       src={preview}
                       alt={`preview of the ${title}`}
-                      className="w-full h-full object-cover rounded-lg"
-                    />) : (
+                      className="object-cover rounded-lg"
+                    />
+                    ): (
                     <span className="text-gray-400">
                         {`select a picture for ${title}`}
                     </span>)
                  }
             </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setImg(e.target.files[0])}
-                  className="border border-gray-800 file:input-bordered file:input-primary file:btn file:btn-sm
-                   text-white border border-gray-600 rounded-lg
-                   cursor-pointer"
-                />
-{/*                 {preview ? ( */}
-{/*                     <label className="text-sm font-medium mb-2"> */}
-{/*                         {title} */}
-{/*                     </label> */}
-{/*                     ) : null */}
-{/*                 } */}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setImg(e.target.files[0])}
+              className="border border-gray-800 file:input-bordered file:input-primary file:btn file:btn-sm
+               text-white border border-gray-600 rounded-lg
+               cursor-pointer"
+            />
+            <div>
+
+                {preview ? (
+                    <span className="text-blue-600 dark:text-sky-400 text-sm font-medium mb-2">
+                        {title}
+                    </span>
+                    ):null
+                }
+            </div>
+
         </div>
     )
 }
