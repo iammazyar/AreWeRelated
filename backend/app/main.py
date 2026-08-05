@@ -10,7 +10,8 @@ from utils import image_from_upload
 app = FastAPI(title="AreWeLookalike API")
 
 origins = [
-    "http://localhost:5173"
+    "http://localhost:5173",
+    "https://iammazyar.github.io"
 ]
 
 app.add_middleware(
