@@ -14,36 +14,69 @@ const SCORE_LABELS = {
 
 function SimilarityMessage({ score }) {
     if (score >= 0.8) return (
-        <span className="text-sky-400 text-sm font-medium text-center">
-            You look so much alike, I got confused that you might be the same person. Are you really?
+        <span className="text-sky-400 text-lg font-semibold text-center">
+            You look so much alike, I got confused that you might be the same person. Are you really?🤨🤔
         </span>
     );
     if (score >= 0.6) return (
-        <span className="text-sky-400 text-sm font-medium text-center">
-            You look so much alike that if you're actually two different people, you might have a serious talk with your father oorrrr your mom!!
+        <span className="text-sky-400 text-lg font-semibold text-center">
+            You look so much alike that if you're actually two different people, you might have a serious talk with your father oorrrr your mom!! 🫵🏻🤣
         </span>
     );
     if (score >= 0.45) return (
-        <span className="text-sky-400 text-sm font-medium text-center">
-            You have a few similarities, but there's still a decent chance one of your parents was… not exactly a model citizen.
+        <span className="text-sky-400 text-lg font-semibold text-center">
+            You have a few similarities, but there's still a decent chance one of your parents was not exactly a model citizen.🤨🤔
         </span>
     );
     return (
-        <span className="text-sky-400 text-sm font-medium text-center">
-            You have no similarities at all dudes, congratulations to your parents.
+        <span className="text-sky-400 text-lg font-semibold text-center">
+            You have no similarities at all dudes, congratulations to your parents. 👏🏻😬
         </span>
     );
 }
+
+function scoreBarColor(value) {
+    if (value >= 0.8) return "bg-green-500";
+    if (value >= 0.6) return "bg-orange-400";
+    if (value >= 0.45) return "bg-orange-600";
+    return "bg-red-600";
+}
+
+
+// function ScoreBar({ label, value }) {
+//     const pct = Math.round(value * 100);
+//     return (
+//         <div className="flex items-center gap-x-3">
+//             <span className="text-gray-400 text-xs w-32 shrink-0">{label}</span>
+//             <div className="flex-1 bg-gray-700 rounded-full h-2">
+//                 <div
+//                     className={`${scoreBarColor(value)} h-2 rounded-full transition-all duration-500`}
+//                     style={{ width: `${pct}%` }}
+//                 />
+//             </div>
+//             <span className="text-white text-xs w-8 text-right">{pct}%</span>
+//         </div>
+//     );
+// }
 
 function ScoreBar({ label, value }) {
     const pct = Math.round(value * 100);
     return (
         <div className="flex items-center gap-x-3">
             <span className="text-gray-400 text-xs w-32 shrink-0">{label}</span>
-            <div className="flex-1 bg-gray-700 rounded-full h-2">
+            <div className="flex-1 relative bg-gray-700 rounded-full h-2 overflow-hidden">
+                {/* smooth spectrum, always in the same place */}
                 <div
-                    className="bg-sky-500 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${pct}%` }}
+                    className="absolute inset-y-0 left-0 w-full rounded-full"
+                    style={{
+                        background:
+                            "linear-gradient(to right, #dc2626 0%, #ea580c 33%, #fb923c 66%, #22c55e 100%)",
+                    }}
+                />
+                {/* mask that covers everything past the current value */}
+                <div
+                    className="absolute inset-y-0 right-0 bg-gray-700 rounded-full transition-all duration-500"
+                    style={{ width: `${100 - pct}%` }}
                 />
             </div>
             <span className="text-white text-xs w-8 text-right">{pct}%</span>
@@ -158,21 +191,6 @@ export default function Body() {
                         />
                     </div>
 
-                    {/* Same pose comparison */}
-                    <span className="text-sm">
-                        <span className="text-gray-400">Same pose: </span>
-                        <span className={samePose ? "text-green-400 font-semibold" : "text-red-400 font-semibold"}>
-                            {samePose ? "Yes" : "No"}
-                        </span>
-                    </span>
-
-                    {/* Overall score */}
-                    <div className="flex flex-col items-center gap-y-1">
-                        <span className="text-white text-5xl font-bold">
-                            {Math.round(result.similarity * 100)}%
-                        </span>
-                        <span className="text-gray-400 text-sm">similarity</span>
-                    </div>
 
                     {/* Verdict message */}
                     <SimilarityMessage score={result.similarity} />
