@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from typing import Dict
@@ -29,6 +29,10 @@ async def compare_faces(img1: UploadFile = File(...), img2: UploadFile = File(..
     analyser = Analyser(FaceDetector())
     result = analyser.compare(image1, image2)
     print(result)
+
+    if "error" in result:
+        raise HTTPException(status_code=422, detail=result["error"])
+
     return result
 
 

@@ -21,7 +21,7 @@ export async function compareFaces(img1, img2) {
   }
   catch (error) {
     if (error.response) {
-      throw new Error(error.response.data.error || "Server error");
+      throw new Error(error.response.data.detail || error.response.data.error || "Server error");
     } else if (error.request) {
       throw new Error("No response from server");
     } else {
