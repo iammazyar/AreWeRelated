@@ -1,6 +1,6 @@
 import numpy as np
 
-from face_detector import FaceDetector
+from .face_detector import FaceDetector
 
 
 class Analyser:
