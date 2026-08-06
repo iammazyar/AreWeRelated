@@ -17,7 +17,7 @@ origins = [
     "http://127.0.0.1:5174",
     "http://127.0.0.1:3000",
     "https://iammazyar.github.io",
-    "https://*.github.io"
+    "https://arewerelated.onrender.com"
 ]
 
 app.add_middleware(
@@ -29,14 +29,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Load the face detector once at startup so requests do not re-download and re-initialize the model.
+face_detector = FaceDetector()
+analyser = Analyser(face_detector)
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
+@app.get("/")
+async def root():
+    return {"message": "AreWeLookalike API is running"}
+
 @app.post("/compare", response_model=Dict)
 async def compare_faces(img1: UploadFile = File(...), img2: UploadFile = File(...)):
     image1 = image_from_upload(img1)
     image2 = image_from_upload(img2)
 
-    analyser = Analyser(FaceDetector())
     result = analyser.compare(image1, image2)
-    print(result)
 
     if "error" in result:
         raise HTTPException(status_code=422, detail=result["error"])

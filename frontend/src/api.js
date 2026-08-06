@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const apiUrl = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "");
+const apiUrl = (import.meta.env.VITE_API_URL || "https://arewerelated.onrender.com").replace(/\/$/, "");
 const api = axios.create({
   baseURL: apiUrl,
   timeout: 30000
