@@ -12,11 +12,7 @@ export async function compareFaces(img1, img2) {
   formData.append("img2", img2);
 
   try {
-    const response = await api.post("/compare", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data"
-      }
-    });
+    const response = await api.post("/compare", formData);
 
     return response.data;
   }
