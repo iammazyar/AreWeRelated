@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const apiUrl = (import.meta.env.VITE_API_URL || "https://arewerelated.onrender.com").replace(/\/$/, "");
+const apiUrl = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "");
 const api = axios.create({
   baseURL: apiUrl,
   timeout: 30000
@@ -12,7 +12,11 @@ export async function compareFaces(img1, img2) {
   formData.append("img2", img2);
 
   try {
-    const response = await api.post("/compare", formData);
+    const response = await api.post("/compare", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data"
+      }
+    });
 
     return response.data;
   }

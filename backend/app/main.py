@@ -1,52 +1,43 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from typing import Dict
-from .face_detector import FaceDetector
-from .analyser import Analyser
-from .utils import image_from_upload
+from face_detector import FaceDetector
+from analyser import Analyser
+from utils import image_from_upload
 
 
-app = FastAPI(title="AreWeLookalike API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.detector = FaceDetector()
+    yield
+
+
+app = FastAPI(title="AreWeRelated API", lifespan=lifespan)
 
 origins = [
     "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:3000",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:5174",
-    "http://127.0.0.1:3000",
     "https://iammazyar.github.io",
-    "https://arewerelated.onrender.com"
+    
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https://.*\.github\.io",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Load the face detector once at startup so requests do not re-download and re-initialize the model.
-face_detector = FaceDetector()
-analyser = Analyser(face_detector)
-
-@app.get("/health")
-async def health_check():
-    return {"status": "ok"}
-
-@app.get("/")
-async def root():
-    return {"message": "AreWeLookalike API is running"}
 
 @app.post("/compare", response_model=Dict)
 async def compare_faces(img1: UploadFile = File(...), img2: UploadFile = File(...)):
     image1 = image_from_upload(img1)
     image2 = image_from_upload(img2)
 
+    analyser = Analyser(app.state.detector)
     result = analyser.compare(image1, image2)
+    print(result)
 
     if "error" in result:
         raise HTTPException(status_code=422, detail=result["error"])
