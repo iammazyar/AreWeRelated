@@ -5,8 +5,9 @@ from face_detector import FaceDetector
 
 class Analyser:
 
-    def __init__(self, detector: FaceDetector):
+    def __init__(self, detector: FaceDetector, model=None):
         self.detector = detector
+        self.model = model
         self.face1 = None
         self.face2 = None
 
@@ -21,20 +22,42 @@ class Analyser:
         scale = np.linalg.norm(kps)
         return kps / scale
 
-    def region_similarity(self, lm1, lm2):
+    def region_similarity_euclidean(self, lm1, lm2, scale=3.0):
         """
-        Cosine similarity between two normalized landmark regions.
-        Flatten to 1-D vectors so we compare the overall shape, not
-        point-by-point positions.
+        Mean per-point Euclidean distance after centering + unit-norm
+        scaling (no rotation alignment, unlike Procrustes) — a plain
+        geometric-distance baseline.
         """
-        v1 = self.normalize_landmarks(lm1).flatten()
-        v2 = self.normalize_landmarks(lm2).flatten()
-        return float(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
+        lm1 = lm1.copy()
+        lm2 = lm2.copy()
+        lm1[:, 2] *= 3.0
+        lm2[:, 2] *= 3.0
+        v1 = self.normalize_landmarks(lm1)
+        v2 = self.normalize_landmarks(lm2)
+        mean_dist = float(np.median(np.linalg.norm(v1 - v2, axis=1)))
+        return float(np.exp(-mean_dist * scale))
 
     def _lm68(self, face):
         """Return the 68 3-D landmarks (from 1k3d68.onnx) as a float array, or None."""
         lm = getattr(face, "landmark_3d_68", None)
         return lm.astype(float) if lm is not None else None
+
+    def region_points(self, face):
+        """
+        (x, y) pixel points per facial region, for drawing region outlines
+        on the frontend. Same index ranges used by the *_similarity methods.
+        """
+        lm = self._lm68(face)
+        if lm is None:
+            return None
+        pts = lm[:, :2]
+        return {
+            "jawline": pts[0:17].tolist(),
+            "eyebrows": [pts[17:22].tolist(), pts[22:27].tolist()],
+            "nose": pts[27:36].tolist(),
+            "eyes": [pts[36:42].tolist(), pts[42:48].tolist()],
+            "mouth": [pts[48:60].tolist(), pts[60:68].tolist()],
+        }
 
     #######################################################
     # Similarity Metrics
@@ -62,7 +85,7 @@ class Analyser:
         lm1, lm2 = self._lm68(self.face1), self._lm68(self.face2)
         if lm1 is None or lm2 is None:
             return 1.0
-        return self.region_similarity(lm1[0:17], lm2[0:17])
+        return self.region_similarity_euclidean(lm1[0:17], lm2[0:17])
 
     def eyebrow_similarity(self):
         lm1, lm2 = self._lm68(self.face1), self._lm68(self.face2)
@@ -70,7 +93,7 @@ class Analyser:
             return 1.0
         brow1 = np.vstack([lm1[17:22], lm1[22:27]])
         brow2 = np.vstack([lm2[17:22], lm2[22:27]])
-        return self.region_similarity(brow1, brow2)
+        return self.region_similarity_euclidean(brow1, brow2)
 
     def nose_similarity(self):
         lm1, lm2 = self._lm68(self.face1), self._lm68(self.face2)
@@ -80,7 +103,7 @@ class Analyser:
             return float(np.exp(-np.linalg.norm(kps1[2] - kps2[2])))
         nose1 = lm1[27:36]  # bridge + base (9 points)
         nose2 = lm2[27:36]
-        return self.region_similarity(nose1, nose2)
+        return self.region_similarity_euclidean(nose1, nose2)
 
     def eye_similarity(self):
         lm1, lm2 = self._lm68(self.face1), self._lm68(self.face2)
@@ -92,7 +115,7 @@ class Analyser:
             return float(np.exp(-abs(eye1 - eye2)))
         eyes1 = np.vstack([lm1[36:42], lm1[42:48]])
         eyes2 = np.vstack([lm2[36:42], lm2[42:48]])
-        return self.region_similarity(eyes1, eyes2)
+        return self.region_similarity_euclidean(eyes1, eyes2)
 
     def mouth_similarity(self):
         lm1, lm2 = self._lm68(self.face1), self._lm68(self.face2)
@@ -104,7 +127,7 @@ class Analyser:
             return float(np.exp(-np.linalg.norm(mouth1 - mouth2)))
         lips1 = np.vstack([lm1[48:60], lm1[60:68]])  # outer + inner lips
         lips2 = np.vstack([lm2[48:60], lm2[60:68]])
-        return self.region_similarity(lips1, lips2)
+        return self.region_similarity_euclidean(lips1, lips2)
 
     def age_similarity(self):
         age1 = self.face1.age
@@ -134,40 +157,30 @@ class Analyser:
         if self.face1 is None or self.face2 is None:
             return {"error": "Face not detected"}
 
-        emb    = self.embedding_similarity()
-        jaw    = self.jawline_similarity()
-        brow   = self.eyebrow_similarity()
-        eye    = self.eye_similarity()
-        nose   = self.nose_similarity()
-        mouth  = self.mouth_similarity()
+        emb = self.embedding_similarity()
 
-        final_score = (
-            0.50 * emb +
-            0.1 * jaw +
-            0.1 * brow +
-            0.1 * eye +
-            0.1 * nose +
-            0.1 * mouth
-        )
+        if self.model is not None:
+            # Trained on FIW kinship pairs (see training/README.md): a
+            # calibrated logistic regression over the embedding similarity.
+            # The 5 landmark region-similarity scores were also evaluated as
+            # features there and dropped — 5-fold family-grouped CV showed
+            # they added no measurable improvement over embedding alone
+            # (AUC 0.799 vs 0.800), so the live endpoint no longer computes
+            # them for the score (still used below for the drawn outlines).
+            final_score = float(self.model["model"].predict_proba([[emb]])[0][1])
+        else:
+            final_score = emb
 
         return {
 
             "similarity": round(final_score, 2),
-
-            "scores": {
-                "embedding": round(emb, 2),
-                "jawline": round(jaw, 2),
-                "eyebrows": round(brow, 2),
-                "eyes": round(eye, 2),
-                "nose": round(nose, 2),
-                "mouth": round(mouth, 2),
-            },
 
             "face1": {
                 "bbox": self.face1.bbox.tolist(),
                 "age": int(self.face1.age),
                 "gender": int(self.face1.gender),
                 "pose": self.face1.pose.tolist() if hasattr(self.face1, "pose") and self.face1.pose is not None else None,
+                "landmarks": self.region_points(self.face1),
             },
 
             "face2": {
@@ -175,5 +188,6 @@ class Analyser:
                 "age": int(self.face2.age),
                 "gender": int(self.face2.gender),
                 "pose": self.face2.pose.tolist() if hasattr(self.face2, "pose") and self.face2.pose is not None else None,
+                "landmarks": self.region_points(self.face2),
             }
         }

@@ -3,15 +3,6 @@ import ImageUploader from "./imageUploader";
 import DetectedFace, { POSE_LABEL } from "./Results";
 import { compareFaces } from "../api";
 
-const SCORE_LABELS = {
-    embedding: "Overall Identity",
-    jawline:   "Jawline",
-    eyebrows:  "Eyebrows",
-    eyes:      "Eyes",
-    nose:      "Nose",
-    mouth:     "Mouth",
-};
-
 function SimilarityMessage({ score }) {
     if (score >= 0.8) return (
         <span className="text-sky-400 text-lg font-semibold text-center">
@@ -32,55 +23,6 @@ function SimilarityMessage({ score }) {
         <span className="text-sky-400 text-lg font-semibold text-center">
             You have no similarities at all dudes, congratulations to your parents. 👏🏻😬
         </span>
-    );
-}
-
-function scoreBarColor(value) {
-    if (value >= 0.8) return "bg-green-500";
-    if (value >= 0.6) return "bg-orange-400";
-    if (value >= 0.45) return "bg-orange-600";
-    return "bg-red-600";
-}
-
-
-// function ScoreBar({ label, value }) {
-//     const pct = Math.round(value * 100);
-//     return (
-//         <div className="flex items-center gap-x-3">
-//             <span className="text-gray-400 text-xs w-32 shrink-0">{label}</span>
-//             <div className="flex-1 bg-gray-700 rounded-full h-2">
-//                 <div
-//                     className={`${scoreBarColor(value)} h-2 rounded-full transition-all duration-500`}
-//                     style={{ width: `${pct}%` }}
-//                 />
-//             </div>
-//             <span className="text-white text-xs w-8 text-right">{pct}%</span>
-//         </div>
-//     );
-// }
-
-function ScoreBar({ label, value }) {
-    const pct = Math.round(value * 100);
-    return (
-        <div className="flex items-center gap-x-3">
-            <span className="text-gray-400 text-xs w-32 shrink-0">{label}</span>
-            <div className="flex-1 relative bg-gray-700 rounded-full h-2 overflow-hidden">
-                {/* smooth spectrum, always in the same place */}
-                <div
-                    className="absolute inset-y-0 left-0 w-full rounded-full"
-                    style={{
-                        background:
-                            "linear-gradient(to right, #dc2626 0%, #ea580c 33%, #fb923c 66%, #22c55e 100%)",
-                    }}
-                />
-                {/* mask that covers everything past the current value */}
-                <div
-                    className="absolute inset-y-0 right-0 bg-gray-700 rounded-full transition-all duration-500"
-                    style={{ width: `${100 - pct}%` }}
-                />
-            </div>
-            <span className="text-white text-xs w-8 text-right">{pct}%</span>
-        </div>
     );
 }
 
@@ -168,7 +110,7 @@ export default function Body() {
             )}
 
             {/* Step 2 — Results */}
-            {currentStep === 2 && result && result.scores && result.face1 && result.face2 && (
+            {currentStep === 2 && result && result.face1 && result.face2 && (
                 <div className="flex flex-col items-center gap-y-8 w-full max-w-3xl px-4">
 
                     {/* Face cards */}
@@ -180,6 +122,7 @@ export default function Body() {
                             age={result.face1.age}
                             gender={result.face1.gender}
                             pose={result.face1.pose}
+                            landmarks={result.face1.landmarks}
                         />
                         <DetectedFace
                             title="Person 2"
@@ -188,26 +131,13 @@ export default function Body() {
                             age={result.face2.age}
                             gender={result.face2.gender}
                             pose={result.face2.pose}
+                            landmarks={result.face2.landmarks}
                         />
                     </div>
 
 
                     {/* Verdict message */}
                     <SimilarityMessage score={result.similarity} />
-
-                    {/* Score breakdown */}
-                    <div className="w-full max-w-md flex flex-col gap-y-3">
-                        <span className="text-gray-400 text-xs uppercase tracking-widest mb-1">
-                            Score Breakdown
-                        </span>
-                        {Object.entries(result.scores).map(([key, value]) => (
-                            <ScoreBar
-                                key={key}
-                                label={SCORE_LABELS[key] ?? key}
-                                value={value}
-                            />
-                        ))}
-                    </div>
 
                     {/* Compare again */}
                     <button

@@ -11,7 +11,15 @@ export const POSE_LABEL = (pose) => {
     return yaw > 0 ? "Right Profile" : "Left Profile";
 };
 
-export default function DetectedFace({ title, imageSrc, bbox, age, gender, pose }) {
+const REGION_COLORS = {
+    jawline: "#a855f7",
+    eyebrows: "#f97316",
+    eyes: "#38bdf8",
+    nose: "#eab308",
+    mouth: "#ec4899",
+};
+
+export default function DetectedFace({ title, imageSrc, bbox, age, gender, pose, landmarks }) {
 
     const imgRef = useRef(null);
     const canvasRef = useRef(null);
@@ -31,19 +39,49 @@ export default function DetectedFace({ title, imageSrc, bbox, age, gender, pose 
             canvas.width = displayWidth;
             canvas.height = displayHeight;
 
-            const scaleX = displayWidth / naturalWidth;
-            const scaleY = displayHeight / naturalHeight;
+            // Replicate `object-fit: cover; object-position: center`: the image is
+            // scaled uniformly to cover the box, then the overflow is cropped evenly
+            // from both sides on whichever axis overflows.
+            const scale = Math.max(displayWidth / naturalWidth, displayHeight / naturalHeight);
+            const offsetX = (displayWidth - naturalWidth * scale) / 2;
+            const offsetY = (displayHeight - naturalHeight * scale) / 2;
+            const toCanvas = ([x, y]) => [x * scale + offsetX, y * scale + offsetY];
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             const [x1, y1, x2, y2] = bbox;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.strokeStyle = "#22c55e";
             ctx.lineWidth = 3;
             ctx.strokeRect(
-                x1 * scaleX,
-                y1 * scaleY,
-                (x2 - x1) * scaleX,
-                (y2 - y1) * scaleY
+                x1 * scale + offsetX,
+                y1 * scale + offsetY,
+                (x2 - x1) * scale,
+                (y2 - y1) * scale
             );
+
+            if (!landmarks) return;
+
+            const drawPath = (points, closed) => {
+                if (!points || points.length < 2) return;
+                ctx.beginPath();
+                points.forEach((p, i) => {
+                    const [cx, cy] = toCanvas(p);
+                    if (i === 0) ctx.moveTo(cx, cy);
+                    else ctx.lineTo(cx, cy);
+                });
+                if (closed) ctx.closePath();
+                ctx.stroke();
+            };
+
+            Object.entries(landmarks).forEach(([region, points]) => {
+                ctx.strokeStyle = REGION_COLORS[region] ?? "#ffffff";
+                ctx.lineWidth = 2;
+                // eyebrows/eyes/mouth are arrays of separate arcs; jawline/nose are one
+                const isMultiPath = Array.isArray(points[0][0]);
+                const closed = region === "eyes" || region === "mouth";
+                if (isMultiPath) points.forEach((sub) => drawPath(sub, closed));
+                else drawPath(points, false);
+            });
         };
 
         if (img.complete) {
@@ -53,7 +91,7 @@ export default function DetectedFace({ title, imageSrc, bbox, age, gender, pose 
         }
         window.addEventListener("resize", draw);
         return () => window.removeEventListener("resize", draw);
-    }, [bbox]);
+    }, [bbox, landmarks]);
 
     return (
         <div className="flex flex-col items-center gap-y-3 w-80">

@@ -9,3 +9,4 @@ def image_from_upload(upload):
 def to_base64(img):
     _, buf = cv2.imencode(".jpg", img)
     return base64.b64encode(buf).decode()
+    
