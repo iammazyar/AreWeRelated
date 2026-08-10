@@ -69,7 +69,7 @@ However, the experiment showed otherwise:
 
 The five landmark-based features provided **no measurable improvement** over embedding similarity alone. The ROC curves were also almost completely overlapping.
 
-![ROC curves](https://github.com/iammazyar/AreWeRelated/blob/main/training/results/roc-curve.png)
+![ROC curves](https://github.com/iammazyar/AreWeRelated/blob/main/training/results/roc_curve.png)
 
 ### Final Model
 
